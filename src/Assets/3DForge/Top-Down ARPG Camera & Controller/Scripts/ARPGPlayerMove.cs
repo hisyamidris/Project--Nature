@@ -42,6 +42,8 @@ public class ARPGPlayerMove: MonoBehaviour {
 	public int moveSpeed = 8; // Character movement speed.
 
 	private bool isPunching = false;
+	private bool isHurricane = false;
+	private bool isWindwalk = false;
 
 
 	void Start()
@@ -72,12 +74,21 @@ public class ARPGPlayerMove: MonoBehaviour {
 	public void Update()
 	{
 
-		if (Input.GetAxis("Fire2")>0) {
+		if (Input.GetAxis ("Fire2") > 0) {
 						isRunning = true;
-				} else
+				} else {
 						isRunning = false;
+				}
 
-		if (Input.GetKey (KeyCode.Q)) {
+		if (Input.GetKey (KeyCode.E)) {
+			isWindwalk = true;
+			transform.Find("Beta/Trail").gameObject.SetActive(true);
+		} else {
+			isWindwalk = false;
+			transform.Find("Beta/Trail").gameObject.SetActive(false);
+		}
+
+		if (Input.GetKey (KeyCode.Q) && !isHurricane) {
 						isPunching = true;
 						animator.SetBool ("isPunching", true);
 				} else {
@@ -85,6 +96,9 @@ public class ARPGPlayerMove: MonoBehaviour {
 						animator.SetBool ("isPunching", false);
 						
 				}
+
+		if (Input.GetKeyDown (KeyCode.W))
+			StartCoroutine("HurricaneKick");
 
 			animator.SetFloat("Speed", currVel.magnitude);
 		// Get the mouse pressed position in world.
@@ -124,6 +138,10 @@ public class ARPGPlayerMove: MonoBehaviour {
 
 			if(isPunching){
 				moveSpeed = 0;
+			}
+
+			if(isWindwalk){
+				moveSpeed = defaultSpeed * 3;
 			}
 			// Look at target.
 			myTransform.rotation = Quaternion.Slerp(myTransform.rotation, Quaternion.LookRotation(currentMoveToPos - myTransform.position), rotationSpeed * Time.deltaTime);		
@@ -248,12 +266,16 @@ public class ARPGPlayerMove: MonoBehaviour {
 		return rect.Contains(new Vector2(x, y));  
 	}
 
-	IEnumerator DoAnimation(string MyAnimation)
-	{
-		animation.CrossFade(MyAnimation);
-		yield return new WaitForSeconds (animation[MyAnimation].length);
-		//yield return new WaitForSeconds(2f); // wait for two seconds.
-		Debug.Log("This happens " + animation[MyAnimation].length + " seconds later. Tada.");
+	IEnumerator HurricaneKick() {
+		Debug.Log("Before Waiting 2 seconds");
+		isHurricane = true;
+		animator.SetBool ("isHurricane", true);
+
+		yield return new WaitForSeconds(2);
+
+		Debug.Log("After Waiting 2 Seconds");
+		isHurricane = false;
+		animator.SetBool ("isHurricane", false);
 	}
 	
 }
