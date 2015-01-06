@@ -31,13 +31,12 @@ public class ARPGPlayerMove: MonoBehaviour {
 	private Transform myTransform;	
 	private Vector3 currentMoveToPos; // The position of the mouse click, the location where the character should go.
 	private bool hasTargetPosition = false; // Tells us if there is a target to move to.
-	private bool rotationOnly = false; // Tells us if there is a face to rotate to
 	private CharacterController controller;
 	private Animator animator; // The animator for the toon. 
 	private CollisionFlags collisionFlags; 	
 	private bool buttonDown = false;	// If player holds the mouse button down.	
 	private float verticalSpeed = 0.0f; // The current vertical speed.		
-	
+
 	void Start()
 	{		
 		layerMask=~layerMask; // Get all the layers to raycast on, this will allow the raycast to ignore chosen layers.
@@ -50,6 +49,8 @@ public class ARPGPlayerMove: MonoBehaviour {
 		// Get the player character controller.
 		controller = myTransform.GetComponent<CharacterController>();			
 
+		StartCoroutine( CalcVelocity() );
+
 		// Get the player animator in child.
 		try
 		{
@@ -60,38 +61,24 @@ public class ARPGPlayerMove: MonoBehaviour {
 			Debug.LogWarning("No animator attached to character." + e.Message);
 		}						
 	}
-	
+
 	public void Update()
 	{		
-		
+			animator.SetFloat("Speed", currVel.magnitude);
 		// Get the mouse pressed position in world.
-//		if ((Input.GetAxis("Fire1")>0 || Input.GetAxis("Fire2")>0) && !isMouseHovering(Input.mousePosition, guiRect, guiRectYFromBottom))
-		if ((Input.GetAxis ("Fire1") > 0) && !isMouseHovering (Input.mousePosition, guiRect, guiRectYFromBottom)) {
-			Ray ray = myCamera.ScreenPointToRay (Input.mousePosition);
-			RaycastHit hit;
-			if (Physics.Raycast (ray, out hit, rayCastDisntance, layerMask)) {
-					currentMoveToPos = hit.point;	
-					// Keep target height same as player height for accuracy.
-					currentMoveToPos.y = myTransform.position.y;
-					//Check if character not already at target position then move
-					if (Vector3.Distance (myTransform.position, currentMoveToPos) > distanceError) {
-							hasTargetPosition = true;
-					}				
-			}
-			buttonDown = true;
-		}
-		else if ((Input.GetAxis ("Fire2") > 0) && !isMouseHovering (Input.mousePosition, guiRect, guiRectYFromBottom)) 
+		if ((Input.GetAxis("Fire1")>0 || Input.GetAxis("Fire2")>0) && !isMouseHovering(Input.mousePosition, guiRect, guiRectYFromBottom))
 		{
-			Ray ray = myCamera.ScreenPointToRay (Input.mousePosition);
+			Ray ray = myCamera.ScreenPointToRay(Input.mousePosition);
 			RaycastHit hit;
-			if (Physics.Raycast (ray, out hit, rayCastDisntance, layerMask)) {
+			if (Physics.Raycast(ray,out hit,rayCastDisntance, layerMask)) 
+			{
 				currentMoveToPos = hit.point;	
 				// Keep target height same as player height for accuracy.
 				currentMoveToPos.y = myTransform.position.y;
 				//Check if character not already at target position then move
-				if (Vector3.Distance (myTransform.position, currentMoveToPos) > distanceError) {
+				if(Vector3.Distance(myTransform.position, currentMoveToPos) > distanceError)
+				{
 					hasTargetPosition = true;
-					rotationOnly = true;
 				}				
 			}
 			buttonDown = true;
@@ -105,52 +92,64 @@ public class ARPGPlayerMove: MonoBehaviour {
 		ApplyGravity ();	
 		// Keep target height same as player height for accuracy.
 		currentMoveToPos.y = myTransform.position.y;
-
+		
 		// Was a successful move enabled.
-		if(hasTargetPosition && !rotationOnly)
+		if(hasTargetPosition)
 		{
+	
 			// Look at target.
 			myTransform.rotation = Quaternion.Slerp(myTransform.rotation, Quaternion.LookRotation(currentMoveToPos - myTransform.position), rotationSpeed * Time.deltaTime);		
 			// Move to target location.
 			collisionFlags = controller.Move((myTransform.forward * moveSpeed * Time.deltaTime)+( new Vector3 (0, verticalSpeed, 0)));
-			if(animator != null)
-			{
-				animator.SetBool("run", true);
-			}
+//			if(animator != null)
+//			{
+//				animator.SetBool("run", true);
+//			}
 			// Check if side was hit and stop character.
 			if(collisionFlags.ToString().Equals("5"))
 			{
 				hasTargetPosition = false;
 				// Set character to previous position so animation of running/walking happens next.
 				collisionFlags = controller.Move((myTransform.forward * -1 * moveSpeed * Time.deltaTime)+( new Vector3 (0, verticalSpeed, 0)));
-				if(animator != null)
-				{
-					animator.SetBool("run", false);
-				}
+//				if(animator != null)
+//				{
+//					animator.SetBool("run", false);
+//				}
 			}
 			// Calculate distance to target location and stop if in range.
 			if(Vector3.Distance(myTransform.position, currentMoveToPos) <= distanceError && !buttonDown)
 			{				
 				hasTargetPosition = false;				
-				if(animator != null)
-				{
-					animator.SetBool("run", false);
-				}
+//				if(animator != null)
+//				{
+//					animator.SetBool("run", false);
+//				}
 			}
-		}
-		else if(hasTargetPosition && rotationOnly) {
-			myTransform.rotation = Quaternion.Slerp(myTransform.rotation, Quaternion.LookRotation(currentMoveToPos - myTransform.position), rotationSpeed * Time.deltaTime);
-			rotationOnly = false;
-			hasTargetPosition = false;	
-		}
+		}	
 		else if(verticalSpeed != 0.0f)
 		{
 			controller.Move(new Vector3 (0, verticalSpeed, 0));
 		}
-
 		
 	}
-	
+
+	private Vector3 prevPos;
+	private Vector3 currVel;
+
+	IEnumerator CalcVelocity()
+	{
+		while( Application.isPlaying )
+		{
+			// Position at frame start
+			prevPos = transform.position;
+			// Wait till it the end of the frame
+			yield return new WaitForEndOfFrame();
+			// Calculate velocity: Velocity = DeltaPosition / DeltaTime
+			currVel = (prevPos - transform.position) / Time.deltaTime;
+			Debug.Log( currVel );
+		}
+	}
+
 	bool IsGrounded () {		
 		return controller.isGrounded;
 	}	
