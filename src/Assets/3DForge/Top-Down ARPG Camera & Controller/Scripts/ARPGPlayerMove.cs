@@ -17,8 +17,9 @@ using System.Collections.Generic;
 // This script requires a character controller to be attached
 [RequireComponent (typeof (CharacterController))]
 public class ARPGPlayerMove: MonoBehaviour {
-  				
-	public int moveSpeed = 8; // Character movement speed.
+  	
+	public int defaultSpeed = 8; // Character movement speed.
+	
 	public int rotationSpeed = 8; // How quick the character rotate to target location.
 	public float distanceError = 0.5f; // The distance where you stop the character between the difference of target.position and character.position.
 	public float gravity = 0.4f; // Gravity for the character.
@@ -36,6 +37,12 @@ public class ARPGPlayerMove: MonoBehaviour {
 	private CollisionFlags collisionFlags; 	
 	private bool buttonDown = false;	// If player holds the mouse button down.	
 	private float verticalSpeed = 0.0f; // The current vertical speed.		
+
+	private bool isRunning = false;	
+	public int moveSpeed = 8; // Character movement speed.
+
+	private bool isPunching = false;
+
 
 	void Start()
 	{		
@@ -63,7 +70,22 @@ public class ARPGPlayerMove: MonoBehaviour {
 	}
 
 	public void Update()
-	{		
+	{
+
+		if (Input.GetAxis("Fire2")>0) {
+						isRunning = true;
+				} else
+						isRunning = false;
+
+		if (Input.GetKey (KeyCode.Q)) {
+						isPunching = true;
+						animator.SetBool ("isPunching", true);
+				} else {
+						isPunching = false;
+						animator.SetBool ("isPunching", false);
+						
+				}
+
 			animator.SetFloat("Speed", currVel.magnitude);
 		// Get the mouse pressed position in world.
 		if ((Input.GetAxis("Fire1")>0 || Input.GetAxis("Fire2")>0) && !isMouseHovering(Input.mousePosition, guiRect, guiRectYFromBottom))
@@ -96,7 +118,13 @@ public class ARPGPlayerMove: MonoBehaviour {
 		// Was a successful move enabled.
 		if(hasTargetPosition)
 		{
-	
+			if(isRunning){
+				moveSpeed = defaultSpeed * 2;
+			} else moveSpeed = defaultSpeed;
+
+			if(isPunching){
+				moveSpeed = 0;
+			}
 			// Look at target.
 			myTransform.rotation = Quaternion.Slerp(myTransform.rotation, Quaternion.LookRotation(currentMoveToPos - myTransform.position), rotationSpeed * Time.deltaTime);		
 			// Move to target location.
@@ -146,7 +174,7 @@ public class ARPGPlayerMove: MonoBehaviour {
 			yield return new WaitForEndOfFrame();
 			// Calculate velocity: Velocity = DeltaPosition / DeltaTime
 			currVel = (prevPos - transform.position) / Time.deltaTime;
-			Debug.Log( currVel );
+			//Debug.Log( currVel );
 		}
 	}
 
@@ -218,6 +246,14 @@ public class ARPGPlayerMove: MonoBehaviour {
 			rect.y = h - rect.y;
 		}
 		return rect.Contains(new Vector2(x, y));  
+	}
+
+	IEnumerator DoAnimation(string MyAnimation)
+	{
+		animation.CrossFade(MyAnimation);
+		yield return new WaitForSeconds (animation[MyAnimation].length);
+		//yield return new WaitForSeconds(2f); // wait for two seconds.
+		Debug.Log("This happens " + animation[MyAnimation].length + " seconds later. Tada.");
 	}
 	
 }
